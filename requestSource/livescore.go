@@ -1,16 +1,12 @@
-package livescore
+package requestSource
 
-type RequestAccessor interface {
-	GetTeam1Name() string
-	GetTeam2Name() string
-	GetTeam1Score() int
-	GetTeam2Score() int
-}
-
-type LivescoreAccessor interface {
-	RequestAccessor
-	GetData() LivescoreData
-}
+// type LivescoreAccessor interface {
+// 	RequestAccessor[LivescoreData]
+// 	GetTeam1Name() string
+// 	GetTeam2Name() string
+// 	GetTeam1Score() int
+// 	GetTeam2Score() int
+// }
 
 type LivescoreData struct {
 	EventID string `json:"Eid"`
