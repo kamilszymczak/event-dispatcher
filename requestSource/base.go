@@ -1,5 +1,6 @@
 package requestSource
 
+// Type Constraint
 type Payload interface {
 	LivescoreData | DummyData
 }
