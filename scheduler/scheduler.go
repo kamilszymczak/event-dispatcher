@@ -78,7 +78,10 @@ func (j *Job) Wait() {
 	<-j.quit
 }
 
-func (j *Job) 
+// Checks if job running indefinitely 
+func (j *Job) Indefinite() bool {
+	return j.repeats == -1
+}
 
 
 // func scheduleWithParams(f func(), params []any) (bool, error) {
