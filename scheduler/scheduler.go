@@ -24,7 +24,7 @@ func newJob(interval time.Duration) *Job {
 	j := &Job{
 		interval: interval,
 		jobFunc: nil,
-		repeats: 1,
+		repeats: -1,
 		quit: make(chan bool, 1),
 	}
 	return j
@@ -44,7 +44,6 @@ func (j *Job) Do(f func()) *Job {
 	ticker := time.NewTicker(j.interval)
 
 	go func() {
-		defer close(j.quit)
 		defer ticker.Stop()
 		i := 0
 		j.running = true
@@ -56,19 +55,17 @@ func (j *Job) Do(f func()) *Job {
 			select {
 				case <- ticker.C:
 					if(i >= j.repeats){
+						close(j.quit)
 						break L
 					}
 					continue
 
 				case <- j.quit:
-					fmt.Println("Job stopped")
 					break L
 			}
 		}
 		j.running = false
-		fmt.Println("Job finished running")
 	}()
-
 	return j
 }
 
@@ -80,6 +77,8 @@ func (j *Job) Stop() {
 func (j *Job) Wait() {
 	<-j.quit
 }
+
+func (j *Job) 
 
 
 // func scheduleWithParams(f func(), params []any) (bool, error) {
