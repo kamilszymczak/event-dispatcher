@@ -1,9 +1,7 @@
 package main
 
 import (
-
 	"fmt"
-	"time"
 
 	"github.com/kamilszymczak/event-dispatcher/request"
 	"github.com/kamilszymczak/event-dispatcher/requestSource"
@@ -40,15 +38,6 @@ func main() {
 		}
 	}
 
-	time.Sleep(6 * time.Second)
-    fmt.Println("Goodye!! to Main function")
-
-	// Consume/Map - Read in json and check if different from previous
-	
+	// time.Sleep(6 * time.Second)
+    // fmt.Println("Goodye!! to Main function")
 }
-
-// use decoration pattern to check if value same as previous
-// func parseRequest(<-chan request.Requestable[requestSource.LivescoreData]) <-chan request.Requestable[requestSource.LivescoreData] {
-
-
-// }
