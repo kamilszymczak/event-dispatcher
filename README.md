@@ -1,7 +1,7 @@
 # Event Dispatcher
 
 Application written in Go that can deploy a tracker to track any number of APIs concurrently.
-Allows to monitor the API source over pre-determined intervals and be handled appropriately as desired.
+Allows to fetch the API source over pre-determined intervals and be handled appropriately as desired.
 
 ## Scheduler Package
 
