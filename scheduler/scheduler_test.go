@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -96,8 +97,90 @@ func TestSchedulerWithVariadicFunc(t *testing.T) {
 	} 
 }
 
-func TestSchedulerWithInvalidArgs(t *testing.T) {
+func TestValidArgumentsValid(t *testing.T) {
+	foo := func(str string) {
+		return 
+	}
 
+	want := true
+	got := validArguments(reflect.ValueOf(foo).Type(), "hello")
+
+	if got != want {
+		t.Errorf("Expected %t got %t", want, got)
+	} 
+}
+
+func TestValidArgumentsInvalid(t *testing.T) {
+	foo := func(str string) {
+		return 
+	}
+
+	want := false
+	got := validArguments(reflect.ValueOf(foo).Type(), "hello", "world")
+
+	if got != want {
+		t.Errorf("Expected %t got %t", want, got)
+	} 
+}
+
+func TestValidArgumentsValidOnlyVariadic(t *testing.T) {
+	foo := func(args ...any) bool {
+		return len(args) > 0
+	}
+
+	want := true
+	got := validArguments(reflect.ValueOf(foo).Type(), 1, 2, 3)
+
+	if got != want {
+		t.Errorf("Expected %t got %t", want, got)
+	} 
+}
+
+func TestValidArgumentsValidNoArgsVariadic(t *testing.T) {
+	foo := func(args ...any) bool {
+		return len(args) > 0
+	}
+
+	want := true
+	got := validArguments(reflect.ValueOf(foo).Type())
+
+	if got != want {
+		t.Errorf("Expected %t got %t", want, got)
+	} 
+}
+
+func TestValidArgumentsValidArgAndEmptyVariadic(t *testing.T) {
+	foo := func(first *int, args ...int) {
+		var sum int = *first
+		for _, a := range args {
+			sum = sum + a
+		}
+		*first = sum
+	}
+
+	want := true
+	got := validArguments(reflect.ValueOf(foo).Type(), new(int))
+
+	if got != want {
+		t.Errorf("Expected %t got %t", want, got)
+	} 
+}
+
+func TestValidArgumentsValidArgAndVariadicArg(t *testing.T) {
+	foo := func(first *int, args ...int) {
+		var sum int = *first
+		for _, a := range args {
+			sum = sum + a
+		}
+		*first = sum
+	}
+
+	want := true
+	got := validArguments(reflect.ValueOf(foo).Type(), new(int), 1, 2)
+
+	if got != want {
+		t.Errorf("Expected %t got %t", want, got)
+	} 
 }
 
 
