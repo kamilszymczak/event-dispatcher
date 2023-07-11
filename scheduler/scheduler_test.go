@@ -24,31 +24,12 @@ func TestSchedulerRunTwiceEverySecond(t *testing.T) {
 	t1 := Every(interval).Repeat(expectedRunCount).Do(increment)
 	t1.Wait()
 	
-	// Then run count equals 2 and duration between two runs not more than run interval + threshold  
 	timingsHelper(t, timings[:], interval, thresholdBetweenRuns)
 
 	if runCount != expectedRunCount {
 		t.Errorf("Expected %d runs, got %d", expectedRunCount, runCount)
 	}
 }
-
-// func TestSchedulerIndefiniteRepeats(t *testing.T) {
-// 	const (
-// 		interval time.Duration = 1 * time.Second
-// 		thresholdBetweenRuns time.Duration = 20 * time.Millisecond
-// 	)
-
-// 	runCount := 0
-// 	var timings []time.Time
-
-// 	increment := func(){
-// 		timings[runCount] = time.Now()
-// 		runCount++
-// 	}
-
-// 	t1 := Every(interval).Do(increment)
-
-// }
 
 func TestSchedulerRunOnceFuncWithParams(t *testing.T) {
 	got := new(int)
