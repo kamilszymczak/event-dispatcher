@@ -2,19 +2,21 @@ package track
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/kamilszymczak/event-dispatcher/request"
 	"github.com/kamilszymczak/event-dispatcher/requestSource"
+	"github.com/kamilszymczak/event-dispatcher/scheduler"
 )
 
 type Track[T requestSource.Payload] struct {
 	refreshRate time.Duration
 	requests []request.Requestable[T]
+	jobsRunning sync.WaitGroup
 }
 
 func New[T requestSource.Payload]() (*Track[T], error) {
@@ -23,6 +25,10 @@ func New[T requestSource.Payload]() (*Track[T], error) {
 	}
 
 	return track, nil
+}
+
+func (t *Track[T]) JobsRunning() *sync.WaitGroup  {
+	return &t.jobsRunning
 }
 
 func (t *Track[T]) RefreshRate(rate time.Duration) {
@@ -35,22 +41,26 @@ func (t *Track[T]) AddRequest(reqs ...request.Requestable[T]) {
 
 func (t *Track[T]) Listen() (<-chan request.Requestable[T]) {
 	out := make(chan request.Requestable[T])
+	t.jobsRunning.Add(len(t.requests))
 
-	for i, request := range t.requests {
-		go fetchData(out, i, request)
+	for _, request := range t.requests {
+		go t.executeJob(out, request)
 	}
+
+	go t.waitForJobsToComplete(out)
 
 	return out
 }
 
-func fetchData[T requestSource.Payload](channel chan<- request.Requestable[T], i int, request request.Requestable[T]) {
-	res, err := http.Get(request.GetUrl())
+func (t *Track[T]) executeJob(ch chan<- request.Requestable[T], req request.Requestable[T]) {
+	defer t.jobsRunning.Done()
 
-	if i < 1 {
-		fmt.Println("sleeping 2 sec " , i)
-		time.Sleep(2 * time.Second)
-		fmt.Println("done sleeping")
-	}
+	job := scheduler.Every(1 * time.Second).Repeat(3).Do(fetchData[T], ch, req)
+	job.Wait()
+}
+
+func fetchData[T requestSource.Payload](channel chan<- request.Requestable[T], request request.Requestable[T]) {
+	res, err := http.Get(request.GetUrl())
 
 	if err != nil {
 		log.Fatal(err)
@@ -64,4 +74,9 @@ func fetchData[T requestSource.Payload](channel chan<- request.Requestable[T], i
 
 	request.SetData(output)
 	channel <- request
+}
+
+func (t *Track[T]) waitForJobsToComplete(ch chan<- request.Requestable[T]) {
+	defer close(ch)
+	t.jobsRunning.Wait()
 }

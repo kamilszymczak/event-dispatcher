@@ -13,12 +13,8 @@ func main() {
 	// since getting read from api could take time and we don't want queued 'messages' to the api
 
 	// Produce - fetch from api
-	var requests []request.Requestable[requestSource.LivescoreData]
-
 	req1 := request.New[requestSource.LivescoreData]("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/909663")
 	req2 := request.New[requestSource.LivescoreData]("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/714150")
-	requests = append(requests, req1, req2)
-
 
 	tracker, _ := track.New[requestSource.LivescoreData]()
 	tracker.AddRequest(req1, req2)
@@ -29,15 +25,14 @@ func main() {
 	// Publish
 	P: for {
 		select {
-		case req, ok := <-trackCh:
-			if(!ok){
-				break P
-			}
-			fmt.Println("received: ", req)
-
+			case req, ok := <-trackCh:
+				if(!ok){
+					fmt.Println("Publish channel closing")
+					break P
+				}
+				fmt.Println("received: ", req.GetData())
 		}
 	}
 
-	// time.Sleep(6 * time.Second)
-    // fmt.Println("Goodye!! to Main function")
+    fmt.Println("Main: Ending")
 }
