@@ -41,6 +41,7 @@ func (j *Job) Repeat(repeats int) *Job {
 }
 
 func validArguments(fArgs reflect.Type, args ...any) bool {
+	// fmt.Printf("function args: %v given args: %v Variadic: %v\n", fArgs.NumIn(), args, fArgs.IsVariadic())
 	if !fArgs.IsVariadic() && fArgs.NumIn() == len(args) {
 		return true
 	}
@@ -58,7 +59,7 @@ func validArguments(fArgs reflect.Type, args ...any) bool {
 func (j *Job) Do(fn any, args ...any) *Job {
 	f := reflect.ValueOf(fn)
 
-	if !validArguments(f.Type(), args) {
+	if !validArguments(f.Type(), args...) {
 		fmt.Println("Invalid number of arguments")
 		return nil
 	}
