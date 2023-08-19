@@ -2,7 +2,7 @@ package track
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -66,11 +66,12 @@ func fetchData[T requestSource.Payload](channel chan<- request.Requestable[T], r
 		log.Fatal(err)
 	}
 	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 
 	var output T
-	json.Unmarshal(body, &output)
+	if err := json.Unmarshal(body, &output); err != nil {
+		log.Fatal(err)
+	}
 
 	request.SetData(output)
 	channel <- request
