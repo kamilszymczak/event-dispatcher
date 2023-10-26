@@ -80,12 +80,13 @@ func (j *Job) Do(fn any, args ...any) *Job {
 			i++
 			f.Call(in)
 
+			if(i >= j.repeats){
+				close(j.quit)
+				break L
+			}
+
 			select {
 				case <- ticker.C:
-					if(i >= j.repeats){
-						close(j.quit)
-						break L
-					}
 					continue
 
 				case <- j.quit:

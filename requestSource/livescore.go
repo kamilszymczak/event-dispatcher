@@ -13,7 +13,7 @@ type LivescoreData struct {
 	EventStatus string `json:"Eps"`
 	Team1ScoreFT string `json:"Tr1OR"`
 	Team2ScoreFT string `json:"Tr2OR"`
-	EventFinished string `json:"epr"` //epr=0 game not started, epr=1 game ongoing, epr=2 game finished
+	EventFinished int `json:"epr"` //epr=0 game not started, epr=1 game ongoing, epr=2 game finished
 }
 
 func (p *LivescoreData) GetData() *LivescoreData {
