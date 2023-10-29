@@ -1,6 +1,10 @@
 package request
 
-import "github.com/kamilszymczak/event-dispatcher/requestSource"
+import (
+	"time"
+
+	"github.com/kamilszymczak/event-dispatcher/requestSource"
+)
 
 type Requestable[T requestSource.Payload] interface {
 	GetUrl() string
@@ -8,10 +12,21 @@ type Requestable[T requestSource.Payload] interface {
 	SetData(T) T
 }
 
-// https://www.reddit.com/r/golang/comments/z51a46/optional_function_parameters_and_generics_for/
+type RefreshRater interface {
+	SetRefreshRate(rate time.Duration)
+	GetRefreshRate() time.Duration
+	HasRefreshRate() bool
+}
+
+type RequestableRefreshRater[T requestSource.Payload] interface {
+	Requestable[T]
+	RefreshRater
+}
+
 type Request[T requestSource.Payload] struct {
-	Url  string
-	Data T
+	Url         string
+	Data        T
+	RefreshRate *time.Duration
 }
 
 func (r *Request[T]) GetUrl() string {
@@ -27,9 +42,22 @@ func (r *Request[T]) SetData(data T) T {
 	return data
 }
 
-func New[T requestSource.Payload](url string) Requestable[T] {
+func (r *Request[T]) GetRefreshRate() time.Duration {
+	return *r.RefreshRate
+}
+
+func (r *Request[T]) SetRefreshRate(rate time.Duration) {
+	r.RefreshRate = &rate
+}
+
+func (r *Request[T]) HasRefreshRate() bool {
+	return r.RefreshRate != nil
+}
+
+func New[T requestSource.Payload](url string) RequestableRefreshRater[T] {
 	request := &Request[T]{
-		Url: url,
+		Url:         url,
+		RefreshRate: nil,
 	}
 	return request
 }
