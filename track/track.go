@@ -67,7 +67,7 @@ func (t *Track[T]) Listen() <-chan response.Responser {
 func (t *Track[T]) executeJob(ch chan<- response.Responser, req request.RequestableRefreshRater) {
 	defer t.jobsRunning.Done()
 
-	job := scheduler.Every(req.GetRefreshRate()).Repeat(3).Do(fetchData[T], ch, req)
+	job := scheduler.Every(req.RefreshRate()).Repeat(3).Do(fetchData[T], ch, req)
 	job.Wait()
 }
 
@@ -78,7 +78,7 @@ func (t *Track[T]) executeJob(ch chan<- response.Responser, req request.Requesta
 //type DataFetch struct{}
 
 func fetchData[T response.Payload](channel chan<- response.Responser, request request.RequestableRefreshRater) {
-	res, err := http.Get(request.GetUrl())
+	res, err := http.Get(request.Url())
 
 	if err != nil {
 		log.Fatal(err)
@@ -91,7 +91,7 @@ func fetchData[T response.Payload](channel chan<- response.Responser, request re
 		log.Fatal(err)
 	}
 
-	resp := response.New[T](*request.GetRequest(), output)
+	resp := response.New[T](*request.Request(), output)
 
 	channel <- resp.GetData()
 }

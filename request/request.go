@@ -5,50 +5,50 @@ import (
 )
 
 type RequestUrler interface {
-	GetUrl() string
+	Url() string
 }
 
 type RefreshRater interface {
 	SetRefreshRate(rate time.Duration)
-	GetRefreshRate() time.Duration
+	RefreshRate() time.Duration
 	HasRefreshRate() bool
 }
 
 type RequestableRefreshRater interface {
 	RequestUrler
 	RefreshRater
-	GetRequest() *Request
+	Request() *Request
 }
 
 type Request struct {
-	Url         string
-	RefreshRate *time.Duration
+	url         string
+	refreshRate *time.Duration
 }
 
 func New(url string) *Request {
 	request := &Request{
-		Url:         url,
-		RefreshRate: nil,
+		url:         url,
+		refreshRate: nil,
 	}
 	return request
 }
 
-func (r *Request) GetUrl() string {
-	return r.Url
+func (r *Request) Url() string {
+	return r.url
 }
 
-func (r *Request) GetRefreshRate() time.Duration {
-	return *r.RefreshRate
+func (r *Request) RefreshRate() time.Duration {
+	return *r.refreshRate
 }
 
 func (r *Request) SetRefreshRate(rate time.Duration) {
-	r.RefreshRate = &rate
+	r.refreshRate = &rate
 }
 
 func (r *Request) HasRefreshRate() bool {
-	return r.RefreshRate != nil
+	return r.refreshRate != nil
 }
 
-func (r *Request) GetRequest() *Request {
+func (r *Request) Request() *Request {
 	return r
 }
