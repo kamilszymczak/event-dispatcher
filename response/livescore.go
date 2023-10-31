@@ -1,4 +1,4 @@
-package requestSource
+package response
 
 import "strconv"
 
@@ -16,24 +16,20 @@ type teamInfo []struct {
 	TeamName string `json:"Nm"`
 }
 
-func (p *LivescoreData) GetTeam1Name() string {
+func (p LivescoreData) GetTeam1Name() string {
 	return p.Team1Info[0].TeamName
 }
 
-func (p *LivescoreData) GetTeam2Name() string {
+func (p LivescoreData) GetTeam2Name() string {
 	return p.Team2Info[0].TeamName
 }
 
-func (p *LivescoreData) GetTeamHomeScore() int {
+func (p LivescoreData) GetTeamHomeScore() int {
 	n, _ := strconv.Atoi(p.Team1ScoreFT)
 	return n
 }
 
-func (p *LivescoreData) GetTeamAwayScore() int {
+func (p LivescoreData) GetTeamAwayScore() int {
 	n, _ := strconv.Atoi(p.Team2ScoreFT)
 	return n
-}
-
-func (p *LivescoreData) GetData() LivescoreData {
-	return *p
 }

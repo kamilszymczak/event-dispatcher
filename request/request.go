@@ -2,14 +2,10 @@ package request
 
 import (
 	"time"
-
-	"github.com/kamilszymczak/event-dispatcher/requestSource"
 )
 
-type Requestable[T requestSource.Payload] interface {
+type RequestUrler interface {
 	GetUrl() string
-	GetData() T
-	SetData(T) T
 }
 
 type RefreshRater interface {
@@ -18,46 +14,41 @@ type RefreshRater interface {
 	HasRefreshRate() bool
 }
 
-type RequestableRefreshRater[T requestSource.Payload] interface {
-	Requestable[T]
+type RequestableRefreshRater interface {
+	RequestUrler
 	RefreshRater
+	GetRequest() *Request
 }
 
-type Request[T requestSource.Payload] struct {
+type Request struct {
 	Url         string
-	Data        T
 	RefreshRate *time.Duration
 }
 
-func (r *Request[T]) GetUrl() string {
-	return r.Url
-}
-
-func (r *Request[T]) GetData() T {
-	return r.Data
-}
-
-func (r *Request[T]) SetData(data T) T {
-	r.Data = data
-	return data
-}
-
-func (r *Request[T]) GetRefreshRate() time.Duration {
-	return *r.RefreshRate
-}
-
-func (r *Request[T]) SetRefreshRate(rate time.Duration) {
-	r.RefreshRate = &rate
-}
-
-func (r *Request[T]) HasRefreshRate() bool {
-	return r.RefreshRate != nil
-}
-
-func New[T requestSource.Payload](url string) RequestableRefreshRater[T] {
-	request := &Request[T]{
+func New(url string) *Request {
+	request := &Request{
 		Url:         url,
 		RefreshRate: nil,
 	}
 	return request
+}
+
+func (r *Request) GetUrl() string {
+	return r.Url
+}
+
+func (r *Request) GetRefreshRate() time.Duration {
+	return *r.RefreshRate
+}
+
+func (r *Request) SetRefreshRate(rate time.Duration) {
+	r.RefreshRate = &rate
+}
+
+func (r *Request) HasRefreshRate() bool {
+	return r.RefreshRate != nil
+}
+
+func (r *Request) GetRequest() *Request {
+	return r
 }

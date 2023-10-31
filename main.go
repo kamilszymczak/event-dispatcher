@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/kamilszymczak/event-dispatcher/request"
-	"github.com/kamilszymczak/event-dispatcher/requestSource"
+	"github.com/kamilszymczak/event-dispatcher/response"
 	"github.com/kamilszymczak/event-dispatcher/track"
 )
 
@@ -13,10 +12,10 @@ func main() {
 	// since getting read from api could take time, and we don't want queued 'messages' to the api
 
 	// Produce - fetch from api
-	req1 := request.New[requestSource.LivescoreData]("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/909663")
-	req2 := request.New[requestSource.LivescoreData]("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/714150")
+	req1 := request.New("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/909663")
+	req2 := request.New("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/714150")
 
-	tracker, _ := track.New[requestSource.LivescoreData]()
+	tracker, _ := track.New[response.LivescoreData]()
 	tracker.AddRequest(req1, req2)
 
 	// Returns a read only channel (<- chan T). Possibly use observer pattern
@@ -32,7 +31,7 @@ P:
 				fmt.Println("Publish channel closing")
 				break P
 			}
-			fmt.Println("received: ", req.GetData())
+			fmt.Println("received: ", req.(response.LivescoreData))
 		}
 	}
 
