@@ -8,29 +8,30 @@ import (
 
 type Scheduler interface {
 	Schedule(f func(), interval time.Duration) *Job
-	Every(interval time.Duration)
+	Every(interval time.Ticker)
 	Repeat(repeats int)
+	Do(fn any, args ...any) *Job
 }
 
 type Job struct {
-	interval time.Duration
+	interval time.Ticker
 	jobFunc func()
 	repeats int
 	running bool
-	quit chan bool
+	quit chan struct{}
 }
 
-func newJob(interval time.Duration) *Job {
+func newJob(interval time.Ticker) *Job {
 	j := &Job{
 		interval: interval,
 		jobFunc: nil,
 		repeats: -1,
-		quit: make(chan bool, 1),
+		quit: make(chan struct{}, 1),
 	}
 	return j
 }
 
-func Every(interval time.Duration) *Job {
+func Every(interval time.Ticker) *Job {
 	j := newJob(interval)
 	return j
 }
@@ -69,10 +70,9 @@ func (j *Job) Do(fn any, args ...any) *Job {
 		in[i] = reflect.ValueOf(param)
 	}
 
-	ticker := time.NewTicker(j.interval)
-
 	go func() {
-		defer ticker.Stop()
+		defer j.interval.Stop()
+		defer func(){j.running = false}()
 		i := 0
 		j.running = true
 
@@ -86,14 +86,12 @@ func (j *Job) Do(fn any, args ...any) *Job {
 			}
 
 			select {
-				case <- ticker.C:
+				case <- j.interval.C:
 					continue
-
 				case <- j.quit:
 					break L
 			}
 		}
-		j.running = false
 	}()
 	return j
 }
@@ -111,13 +109,3 @@ func (j *Job) Wait() {
 func (j *Job) Indefinite() bool {
 	return j.repeats == -1
 }
-
-
-// func scheduleWithParams(f func(), params []any) (bool, error) {
-// 	fun := reflect.TypeOf(f)
-// 	paramsCount := fun.NumIn()
-// 	if len(params) != paramsCount {
-// 		return _, ErrParamsNotAdapted
-// 	}
-
-// }
