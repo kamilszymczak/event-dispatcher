@@ -14,14 +14,14 @@ type config struct {
 	} `yaml:"request"`
 }
 
-var cfg *config
+var cfg config
 var once sync.Once
 
-func GetConfig() config {
+func GetConfig() *config {
 	once.Do(func() {
-		readFile(cfg)
+		readFile(&cfg)
 	})
-	return *cfg
+	return &cfg
 }
 
 func processError(err error) {
@@ -30,15 +30,17 @@ func processError(err error) {
 }
 
 func readFile(cfg *config) {
-    f, err := os.Open("config.yml")
+    f, err := os.ReadFile("S:/DevProjects/event-dispatcher/config/config.yaml")
     if err != nil {
         processError(err)
     }
-    defer f.Close()
 
-    decoder := yaml.NewDecoder(f)
-    err = decoder.Decode(cfg)
-    if err != nil {
+    unmarshalErr := yaml.Unmarshal(f, cfg)
+    if unmarshalErr != nil {
         processError(err)
     }
 } 
+
+func (c config) FetchRate() int {
+    return c.Request.FetchRate
+}
