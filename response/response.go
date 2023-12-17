@@ -1,20 +1,8 @@
 package response
 
-import "github.com/kamilszymczak/event-dispatcher/request"
-
-// Type Constraint
-type Payload interface {
-	LivescoreData | DummyData
-	ResponseAccessor
-}
-
-type Response[T Payload] struct {
-	request  request.Request
-	response T
-}
-
 type Responser interface {
 	ResponseAccessor
+	Unmarshal(bytes []byte) any
 }
 
 type ResponseAccessor interface {
@@ -24,13 +12,30 @@ type ResponseAccessor interface {
 	GetTeamAwayScore() int
 }
 
-func New[T Payload](req request.Request, res T) *Response[T] {
-	return &Response[T]{
-		request:  req,
-		response: res,
-	}
-}
+// func Insert[T Payload](req request.Request, res T) (*Response[T], bool) {
+// 	journal := make(map[request.RequestableRefreshRater]*Response[T])
 
-func (r *Response[T]) GetData() ResponseAccessor {
-	return r.response
-}
+// 	_, ok := journal[&req]
+
+// 	if !ok {
+// 		newResponse := &Response[T]{
+// 			request:  req,
+// 			response: res,
+// 		}
+// 		journal[&req] = newResponse
+// 		return journal[&req], true
+// 	} else {
+// 		// TODO: Compare if new differs from old if does then replace with new
+// 		if responseDataChanged(journal[&req].response, res) {
+// 			journal[&req].response = res
+// 			return journal[&req], true
+// 		}
+// 	}
+// 	return journal[&req], false
+// }
+
+
+// use type that can be compared and compare
+// func responseDataChanged[T Payload](current, new T) bool {
+// 	return current.GetTeamHomeScore() == new.GetTeamHomeScore() && current.GetTeamAwayScore() == new.GetTeamAwayScore()
+// }

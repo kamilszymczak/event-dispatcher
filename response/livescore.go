@@ -1,6 +1,10 @@
 package response
 
-import "strconv"
+import (
+	"encoding/json"
+	"log"
+	"strconv"
+)
 
 type LivescoreData struct {
 	EventID       string   `json:"Eid"`
@@ -32,4 +36,12 @@ func (p LivescoreData) GetTeamHomeScore() int {
 func (p LivescoreData) GetTeamAwayScore() int {
 	n, _ := strconv.Atoi(p.Team2ScoreFT)
 	return n
+}
+
+func (p LivescoreData) Unmarshal(bytes []byte) any {
+	var output LivescoreData
+	if err := json.Unmarshal(bytes, &output); err != nil {
+		log.Fatal(err)
+	}
+	return output
 }
