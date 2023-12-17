@@ -4,24 +4,26 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 )
 
 type Scheduler interface {
 	Schedule(f func(), interval time.Duration) *Job
-	Every(interval time.Ticker)
+	Every(interval clockwork.Ticker)
 	Repeat(repeats int)
 	Do(fn any, args ...any) *Job
 }
 
 type Job struct {
-	interval time.Ticker
+	interval clockwork.Ticker
 	jobFunc func()
 	repeats int
 	running bool
 	quit chan struct{}
 }
 
-func newJob(interval time.Ticker) *Job {
+func newJob(interval clockwork.Ticker) *Job {
 	j := &Job{
 		interval: interval,
 		jobFunc: nil,
@@ -31,7 +33,7 @@ func newJob(interval time.Ticker) *Job {
 	return j
 }
 
-func Every(interval time.Ticker) *Job {
+func Every(interval clockwork.Ticker) *Job {
 	j := newJob(interval)
 	return j
 }
@@ -86,7 +88,7 @@ func (j *Job) Do(fn any, args ...any) *Job {
 			}
 
 			select {
-				case <- j.interval.C:
+				case <- j.interval.Chan():
 					continue
 				case <- j.quit:
 					break L

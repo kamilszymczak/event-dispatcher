@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jonboulle/clockwork"
 	"github.com/kamilszymczak/event-dispatcher/config"
 	"github.com/kamilszymczak/event-dispatcher/response"
 	"github.com/kamilszymczak/event-dispatcher/scheduler"
@@ -61,8 +62,8 @@ func (p *poller) Listen() <-chan Event {
 func (t *poller) executeJob(observable Observable) {
 	defer t.jobsRunning.Done()
 
-	ticker := time.NewTicker(*observable.interval)
-	job := scheduler.Every(*ticker).Repeat(3).Do(t.poolData, observable)
+	ticker := clockwork.NewRealClock().NewTicker(*observable.interval)
+	job := scheduler.Every(ticker).Repeat(3).Do(t.poolData, observable)
 	job.Wait()
 }
 
