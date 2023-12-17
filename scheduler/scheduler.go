@@ -44,8 +44,31 @@ func (j *Job) Repeat(repeats int) *Job {
 	return j
 }
 
+func allArgumentsOfSameType(args ...any) bool {
+	m := map[reflect.Type]bool{}
+	for _ , x := range args {
+		m[reflect.TypeOf(x)] = true
+	}
+	return len(m) == 1	
+}
+
 func validArguments(fArgs reflect.Type, args ...any) bool {
 	// fmt.Printf("function args: %v given args: %v Variadic: %v\n", fArgs.NumIn(), args, fArgs.IsVariadic())
+	if fArgs.IsVariadic() && fArgs.In(0).Elem().String() == "interface {}"{
+		if len(args) > 1 && reflect.TypeOf(args[0]) != reflect.TypeOf(args[1]) {
+			return false
+		}
+		return true
+	}
+	if fArgs.IsVariadic() && fArgs.In(0) != reflect.TypeOf(args[0]) {
+		return false
+	}
+	if fArgs.NumIn() > 0 && fArgs.In(0) != reflect.TypeOf(args[0]) {
+		return false
+	} 
+	if fArgs.IsVariadic() && len(args) > 0 && fArgs.In(0) == reflect.TypeOf(args[0]) {
+		return true
+	}
 	if !fArgs.IsVariadic() && fArgs.NumIn() == len(args) {
 		return true
 	}

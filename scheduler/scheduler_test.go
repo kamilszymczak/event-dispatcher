@@ -118,88 +118,119 @@ func TestSchedulerWithStringParameters(t *testing.T) {
 	}
 }
 
-func TestValidFuncArguments(t *testing.T) {
-	foo := func(str string) {
-		return 
+func TestSchedulerFunctionArgumentsValidation(t *testing.T) {
+	testCases := []struct {
+		name 		string
+		want		bool
+		instanceVar	string
+		fn 			any
+		fnParams	[]interface{}
+	}{
+		{
+			name: "Valid function arguments",
+			want: true,
+			fn: func(str string) { 
+			},
+			fnParams: []interface{}{"hello"},
+		},
+		{
+			name: "Valid function arguments for variadic function",
+			want: true,
+			fn: func(args ...any) bool {
+				return len(args) > 0
+			},
+			fnParams: []interface{}{"hello", "world"},
+		},
+		{
+			name: "Invalid function arguments for variadic function providing different parameters to function",
+			want: false,
+			fn: func(args ...any) bool {
+				return len(args) > 0
+			},
+			fnParams: []interface{}{"hello", 1},
+		},
+		{
+			name: "Invalid function arguments for function taking in a single value while providing a variadic parameter",
+			want: false,
+			fn: func(str string) { 
+			},
+			fnParams: []interface{}{"hello", "world"},
+		},
+		{
+			name: "Valid arguments for variadic function when providing an empty slice",
+			want: true,
+			fn: func(args ...any) bool {
+				return len(args) > 0
+			},
+			fnParams: []interface{}{},
+		},
+		{
+			name: "Valid arguments for function with normal parameter and variadic parameter",
+			want: true,
+			fn: func(first *int, args ...int) {
+			},
+			fnParams: []interface{}{new(int), 1, 2},
+		},
+		{
+			name: "Valid arguments for function with normal parameter and empty variadic parameter",
+			want: true,
+			fn: func(first *int, args ...int) {
+			},
+			fnParams: []interface{}{new(int)},
+		},
+		{
+			name: "Invalid arguments for function taking a pointer parameter and variadic parameter. 1st parameter not provided. Type mismatch",
+			want: false,
+			fn: func(first *int, args ...int) {
+			},
+			fnParams: []interface{}{1, 2},
+		},
+		{
+			name: "Invalid arguments for function taking an int variadic parameter while providing a string",
+			want: false,
+			fn: func(args ...int) {
+			},
+			fnParams: []interface{}{"a", "b"},
+		},
+		{
+			name: "Invalid arguments for function taking a pointer and variadic parameter when not providing the pointer",
+			want: false,
+			fn: func(first *int, args ...int) {
+			},
+			fnParams: []interface{}{"a", "b"},
+		},
 	}
 
-	want := true
-	got := validArguments(reflect.ValueOf(foo).Type(), "hello")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := validArguments(reflect.ValueOf(tc.fn).Type(), tc.fnParams...)
 
-	if got != want {
-		t.Errorf("Expected %t got %t", want, got)
-	} 
-}
-
-func TestInvalidFuncArguments(t *testing.T) {
-	foo := func(str string) {
-		return 
+			if got != tc.want {
+				t.Errorf("Expected %t got %t", tc.want, got)
+			}
+		})
 	}
-
-	want := false
-	got := validArguments(reflect.ValueOf(foo).Type(), "hello", "world")
-
-	if got != want {
-		t.Errorf("Expected %t got %t", want, got)
-	} 
 }
 
-func TestValidArgumentsVariadicFunc(t *testing.T) {
-	foo := func(args ...any) bool {
-		return len(args) > 0
-	}
+// func TestSchedulerThrowsError(t *testing.T) {
+// 	const (
+// 		interval time.Duration = 1 * time.Second
+// 		expectedRunCount int = 2
+// 	)
+// 	runCount := 0
+// 	fc := clock.NewMockClock()
+// 	ticker := fc.NewTicker(interval)
 
-	want := true
-	got := validArguments(reflect.ValueOf(foo).Type(), 1, 2, 3)
+// 	// Given a function to execute
+// 	increment := func(count *int){
+// 		*count++
+// 	}
 
-	if got != want {
-		t.Errorf("Expected %t got %t", want, got)
-	} 
-}
+// 	t1 := Every(ticker).Repeat(expectedRunCount).Do(increment, runCount)
+// 	fc.AddTime(interval)
+// 	t1.Wait()
 
-func TestValidArgumentsNoArgsVariadicFunc(t *testing.T) {
-	foo := func(args ...any) bool {
-		return len(args) > 0
-	}
-
-	want := true
-	got := validArguments(reflect.ValueOf(foo).Type())
-
-	if got != want {
-		t.Errorf("Expected %t got %t", want, got)
-	} 
-}
-
-func TestValidArgumentsValidArgAndEmptyVariadicFunc(t *testing.T) {
-	foo := func(first *int, args ...int) {
-		var sum int = *first
-		for _, a := range args {
-			sum = sum + a
-		}
-		*first = sum
-	}
-
-	want := true
-	got := validArguments(reflect.ValueOf(foo).Type(), new(int))
-
-	if got != want {
-		t.Errorf("Expected %t got %t", want, got)
-	} 
-}
-
-func TestValidArgumentsValidVariadicFuncArguments(t *testing.T) {
-	foo := func(first *int, args ...int) {
-		var sum int = *first
-		for _, a := range args {
-			sum = sum + a
-		}
-		*first = sum
-	}
-
-	want := true
-	got := validArguments(reflect.ValueOf(foo).Type(), new(int), 1, 2)
-
-	if got != want {
-		t.Errorf("Expected %t got %t", want, got)
-	} 
-}
+// 	if runCount != expectedRunCount {
+// 		t.Errorf("Expected %d runs, got %d", expectedRunCount, runCount)
+// 	}
+// }
