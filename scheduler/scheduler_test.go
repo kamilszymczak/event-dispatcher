@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -9,102 +8,117 @@ import (
 	"github.com/mixer/clock"
 )
 
-func TestSchedulerRunTwiceEverySecond(t *testing.T) {
-	const (
-		interval time.Duration = 1 * time.Second
-		expectedRunCount int = 2
-	)
-	runCount := 0
-	fc := clock.NewMockClock()
-	ticker := fc.NewTicker(interval)
-
-	// Given a function to execute
-	increment := func(){
-		runCount++
+func TestSchedulerWithIntegerParameters(t *testing.T) {
+	testCases := []struct {
+		name 		string
+		interval 	time.Duration
+		repeat		int
+		want		int
+		instanceVar	int
+		fn 			any
+		fnParams	[]int
+	}{
+		{
+			name: "scheduler run twice",
+			interval: 1 * time.Second,
+			repeat: 2,
+			want: 2,
+			instanceVar: 0,
+			fn: func(count *int){
+				*count++
+			},
+		},
+		{
+			name: "scheduler run once function with two parameters",
+			interval: 1 * time.Second,
+			repeat: 1,
+			want: 4,
+			instanceVar: 0,
+			fn: func(result *int, a, b int) {
+				*result = a+b
+			},
+			fnParams: []int{1, 3},
+		},
 	}
 
-	t1 := Every(ticker).Repeat(expectedRunCount).Do(increment)
-	fc.AddTime(interval)
-	t1.Wait()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fc := clock.NewMockClock()
+			ticker := fc.NewTicker(tc.interval)
 
-	if runCount != expectedRunCount {
-		t.Errorf("Expected %d runs, got %d", expectedRunCount, runCount)
+			var t1 *Job
+			if len(tc.fnParams) > 0 {
+				arguments := []interface{}{&tc.instanceVar}
+				for _, x := range tc.fnParams {
+					arguments = append(arguments, x)
+				}
+				t1 = Every(ticker).Repeat(tc.repeat).Do(tc.fn, arguments...)
+			} else {
+				t1 = Every(ticker).Repeat(tc.repeat).Do(tc.fn, &tc.instanceVar)
+			}
+
+			fc.AddTime(tc.interval)
+			t1.Wait()
+
+			if tc.instanceVar != tc.want {
+				t.Errorf("Expected %d runs, got %d", tc.want, tc.instanceVar)
+			}
+		})
 	}
 }
 
-func TestSchedulerRunOnceFuncWithParams(t *testing.T) {
-	const (
-		interval time.Duration = 1 * time.Second
-		want int = 4
-	)
-	got := new(int)
-	fc := clock.NewMockClock()
-	ticker := fc.NewTicker(interval)
-
-	addTwo := func (result *int, a, b int) {
-		*result = a+b
+func TestSchedulerWithStringParameters(t *testing.T) {
+	testCases := []struct {
+		name 		string
+		interval 	time.Duration
+		repeat		int
+		want		string
+		instanceVar	string
+		fn 			any
+		fnParams	[]string
+	}{
+		{
+			name: "scheduler run once function with variadic parameters",
+			interval: 500 * time.Millisecond,
+			repeat: 2,
+			want: "HelloWorldHelloWorld",
+			instanceVar: "",
+			fn: func (result *string, args ...string) {
+				for _, x := range args {
+					*result = (*result) + x
+				}
+			},
+			fnParams: []string{"Hello", "World"},
+		},
 	}
 
-	t1 := Every(ticker).Repeat(1).Do(addTwo, got, 1, 3)
-	fc.AddTime(interval)
-	t1.Wait()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fc := clock.NewMockClock()
+			ticker := fc.NewTicker(tc.interval)
 
-	if *got != want {
-		t.Errorf("Expected %d got %d", want, *got)
-	} 
-}
+			var t1 *Job
+			if len(tc.fnParams) > 0 {
+				arguments := []interface{}{&tc.instanceVar}
+				for _, x := range tc.fnParams {
+					arguments = append(arguments, x)
+				}
+				t1 = Every(ticker).Repeat(tc.repeat).Do(tc.fn, arguments...)
+			} else {
+				t1 = Every(ticker).Repeat(tc.repeat).Do(tc.fn, &tc.instanceVar)
+			}
 
-func TestSchedulerRunThreeTimesFuncWithParams(t *testing.T) {
-	const (
-		interval time.Duration = 1 * time.Second
-		want int = 3
-	)
-	got := new(int)
-	// fc := clockwork.NewFakeClock()
-	// ticker := fc.NewTicker(interval)
-	fc := clock.NewMockClock()
-	ticker := fc.NewTicker(interval)
+			fc.AddTime(tc.interval)
+			t1.Wait()
 
-	increment := func(result *int) {
-		log.Print("function executed")
-		(*result)++
+			if tc.instanceVar != tc.want {
+				t.Errorf("Expected %s runs, got %s", tc.want, tc.instanceVar)
+			}
+		})
 	}
-
-	t1 := Every(ticker).Repeat(3).Do(increment, got)
-	fc.AddTime(2 * time.Second)
-	t1.Wait()
-
-	if *got != want {
-		t.Errorf("Expected %d got %d", want, *got)
-	} 
 }
 
-func TestSchedulerWithVariadicFunc(t *testing.T) {
-	const (
-		interval time.Duration = 500 * time.Millisecond
-		want string = "HelloWorldHelloWorld"
-	)
-	got := new(string)
-
-	fc := clock.NewMockClock()
-	ticker := fc.NewTicker(interval)
-
-	append := func (result *string, args ...string) {
-		for _, x := range args {
-			*result = (*result) + x
-		}
-	}
-
-	t1 := Every(ticker).Repeat(2).Do(append, got, "Hello", "World")
-	fc.AddTime(1 * time.Second)
-	t1.Wait()
-
-	if *got != want {
-		t.Errorf("Expected %s got %s", want, *got)
-	} 
-}
-
-func TestValidArgumentsValid(t *testing.T) {
+func TestValidFuncArguments(t *testing.T) {
 	foo := func(str string) {
 		return 
 	}
@@ -117,7 +131,7 @@ func TestValidArgumentsValid(t *testing.T) {
 	} 
 }
 
-func TestValidArgumentsInvalid(t *testing.T) {
+func TestInvalidFuncArguments(t *testing.T) {
 	foo := func(str string) {
 		return 
 	}
@@ -130,7 +144,7 @@ func TestValidArgumentsInvalid(t *testing.T) {
 	} 
 }
 
-func TestValidArgumentsValidOnlyVariadic(t *testing.T) {
+func TestValidArgumentsVariadicFunc(t *testing.T) {
 	foo := func(args ...any) bool {
 		return len(args) > 0
 	}
@@ -143,7 +157,7 @@ func TestValidArgumentsValidOnlyVariadic(t *testing.T) {
 	} 
 }
 
-func TestValidArgumentsValidNoArgsVariadic(t *testing.T) {
+func TestValidArgumentsNoArgsVariadicFunc(t *testing.T) {
 	foo := func(args ...any) bool {
 		return len(args) > 0
 	}
@@ -156,7 +170,7 @@ func TestValidArgumentsValidNoArgsVariadic(t *testing.T) {
 	} 
 }
 
-func TestValidArgumentsValidArgAndEmptyVariadic(t *testing.T) {
+func TestValidArgumentsValidArgAndEmptyVariadicFunc(t *testing.T) {
 	foo := func(first *int, args ...int) {
 		var sum int = *first
 		for _, a := range args {
@@ -173,7 +187,7 @@ func TestValidArgumentsValidArgAndEmptyVariadic(t *testing.T) {
 	} 
 }
 
-func TestValidArgumentsValidArgAndVariadicArg(t *testing.T) {
+func TestValidArgumentsValidVariadicFuncArguments(t *testing.T) {
 	foo := func(first *int, args ...int) {
 		var sum int = *first
 		for _, a := range args {
