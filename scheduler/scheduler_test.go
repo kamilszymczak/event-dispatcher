@@ -1,30 +1,31 @@
 package scheduler
 
 import (
+	"log"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/mixer/clock"
 )
 
 func TestSchedulerRunTwiceEverySecond(t *testing.T) {
 	const (
 		interval time.Duration = 1 * time.Second
 		expectedRunCount int = 2
-		thresholdBetweenRuns time.Duration = 20 * time.Millisecond
 	)
 	runCount := 0
-	var timings [expectedRunCount]time.Time
+	fc := clock.NewMockClock()
+	ticker := fc.NewTicker(interval)
 
 	// Given a function to execute
 	increment := func(){
-		timings[runCount] = time.Now()
 		runCount++
 	}
 
-	t1 := Every(interval).Repeat(expectedRunCount).Do(increment)
+	t1 := Every(ticker).Repeat(expectedRunCount).Do(increment)
+	fc.AddTime(interval)
 	t1.Wait()
-	
-	timingsHelper(t, timings[:], interval, thresholdBetweenRuns)
 
 	if runCount != expectedRunCount {
 		t.Errorf("Expected %d runs, got %d", expectedRunCount, runCount)
@@ -32,13 +33,20 @@ func TestSchedulerRunTwiceEverySecond(t *testing.T) {
 }
 
 func TestSchedulerRunOnceFuncWithParams(t *testing.T) {
+	const (
+		interval time.Duration = 1 * time.Second
+		want int = 4
+	)
 	got := new(int)
-	want := 4
+	fc := clock.NewMockClock()
+	ticker := fc.NewTicker(interval)
+
 	addTwo := func (result *int, a, b int) {
 		*result = a+b
 	}
 
-	t1 := Every(time.Second).Repeat(1).Do(addTwo, got, 1, 3)
+	t1 := Every(ticker).Repeat(1).Do(addTwo, got, 1, 3)
+	fc.AddTime(interval)
 	t1.Wait()
 
 	if *got != want {
@@ -47,13 +55,23 @@ func TestSchedulerRunOnceFuncWithParams(t *testing.T) {
 }
 
 func TestSchedulerRunThreeTimesFuncWithParams(t *testing.T) {
+	const (
+		interval time.Duration = 1 * time.Second
+		want int = 3
+	)
 	got := new(int)
-	want := 3
+	// fc := clockwork.NewFakeClock()
+	// ticker := fc.NewTicker(interval)
+	fc := clock.NewMockClock()
+	ticker := fc.NewTicker(interval)
+
 	increment := func(result *int) {
+		log.Print("function executed")
 		(*result)++
 	}
 
-	t1 := Every(500 * time.Millisecond).Repeat(3).Do(increment, got)
+	t1 := Every(ticker).Repeat(3).Do(increment, got)
+	fc.AddTime(2 * time.Second)
 	t1.Wait()
 
 	if *got != want {
@@ -62,15 +80,23 @@ func TestSchedulerRunThreeTimesFuncWithParams(t *testing.T) {
 }
 
 func TestSchedulerWithVariadicFunc(t *testing.T) {
+	const (
+		interval time.Duration = 500 * time.Millisecond
+		want string = "HelloWorldHelloWorld"
+	)
 	got := new(string)
-	want := "HelloWorldHelloWorld"
+
+	fc := clock.NewMockClock()
+	ticker := fc.NewTicker(interval)
+
 	append := func (result *string, args ...string) {
 		for _, x := range args {
 			*result = (*result) + x
 		}
 	}
 
-	t1 := Every(500 * time.Millisecond).Repeat(2).Do(append, got, "Hello", "World")
+	t1 := Every(ticker).Repeat(2).Do(append, got, "Hello", "World")
+	fc.AddTime(1 * time.Second)
 	t1.Wait()
 
 	if *got != want {
@@ -162,16 +188,4 @@ func TestValidArgumentsValidArgAndVariadicArg(t *testing.T) {
 	if got != want {
 		t.Errorf("Expected %t got %t", want, got)
 	} 
-}
-
-
-func timingsHelper(t *testing.T, arr []time.Time, interval time.Duration, threshold time.Duration) {
-	for i, x := range arr[:len(arr) - 1] {
-		runTime := arr[i+1].Sub(x)
-		t.Logf("Timings difference %f", runTime.Seconds())
-
-		if runTime >= interval + threshold {
-			t.Errorf("Expected duration between runs under %f, got %f", (interval + threshold).Seconds(), runTime.Seconds())
-		}
-	}
 }

@@ -2,28 +2,29 @@ package scheduler
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
-	"github.com/jonboulle/clockwork"
+	"github.com/mixer/clock"
 )
 
 type Scheduler interface {
 	Schedule(f func(), interval time.Duration) *Job
-	Every(interval clockwork.Ticker)
+	Every(interval clock.Ticker)
 	Repeat(repeats int)
 	Do(fn any, args ...any) *Job
 }
 
 type Job struct {
-	interval clockwork.Ticker
+	interval clock.Ticker
 	jobFunc func()
 	repeats int
 	running bool
 	quit chan struct{}
 }
 
-func newJob(interval clockwork.Ticker) *Job {
+func newJob(interval clock.Ticker) *Job {
 	j := &Job{
 		interval: interval,
 		jobFunc: nil,
@@ -33,7 +34,7 @@ func newJob(interval clockwork.Ticker) *Job {
 	return j
 }
 
-func Every(interval clockwork.Ticker) *Job {
+func Every(interval clock.Ticker) *Job {
 	j := newJob(interval)
 	return j
 }
@@ -84,11 +85,12 @@ func (j *Job) Do(fn any, args ...any) *Job {
 
 			if(i >= j.repeats){
 				close(j.quit)
-				break L
+				return
 			}
 
 			select {
 				case <- j.interval.Chan():
+					log.Print("received from ticker ch")
 					continue
 				case <- j.quit:
 					break L
