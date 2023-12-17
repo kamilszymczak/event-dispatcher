@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/kamilszymczak/event-dispatcher/request"
+	"log"
+
+	"github.com/kamilszymczak/event-dispatcher/poller"
 	"github.com/kamilszymczak/event-dispatcher/response"
-	"github.com/kamilszymczak/event-dispatcher/track"
 )
 
 func main() {
@@ -12,33 +13,23 @@ func main() {
 	// since getting read from api could take time, and we don't want queued 'messages' to the api
 
 	// Produce - fetch from api
-	req1 := request.New("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/909663")
-	req2 := request.New("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/714150")
+	pollerService := poller.New("https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/", response.LivescoreData{})
+	pollerService.AddObservable(poller.Observable{Address: "909663"})
 
-	tracker, _ := track.New[response.LivescoreData]()
-	tracker.AddRequest(req1, req2)
+	listenChan := pollerService.Listen()
 
-	// Returns a read only channel (<- chan T). Possibly use observer pattern
-	//tracker.SetComputeFunc(computeScoreChanged)
-	trackCh := tracker.Listen()
-
-	// Publish
-P:
+	P:
 	for {
 		select {
-		case req, ok := <-trackCh:
+		case req, ok := <-listenChan:
 			if !ok {
 				fmt.Println("Publish channel closing")
 				break P
 			}
-			fmt.Println("received: ", req.(response.LivescoreData))
+			typedRes, _ := pollerService.HandleEvent(req)
+			log.Print("received: ", typedRes)
 		}
 	}
 
 	fmt.Println("Main: Ending")
-}
-
-// use type that can be compared and compare
-func computeScoreChanged(current, new int) bool {
-	return current != new
 }
