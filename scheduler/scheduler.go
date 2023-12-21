@@ -4,16 +4,15 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"time"
 
 	"github.com/mixer/clock"
 )
 
 type Scheduler interface {
-	Schedule(f func(), interval time.Duration) *Job
 	Every(interval clock.Ticker)
 	Repeat(repeats int)
 	Do(fn any, args ...any) *Job
+	Wait()
 }
 
 type Job struct {
