@@ -67,10 +67,9 @@ func (t *poller) executeJob(observable Observable) {
 	job.Wait()
 }
 
-func (t *poller) poolData(observable Observable) {
+func (t *poller) fetchData(observable Observable) []byte {
 	log.Print("pooling data for " + observable.Address)
 
-	//TODO - Make a httpClient struct for below to be able to mock with dummy api server
 	res, err := http.Get(fmt.Sprintf("%s%s", t.apiUrl, observable.Address))
 	if err != nil {
 		log.Fatal(err)
@@ -82,12 +81,20 @@ func (t *poller) poolData(observable Observable) {
 		log.Fatal(err)
 	}
 
-	e := Event{
+	return body
+}
+
+func buildEvent(observable Observable, body []byte) Event {
+	return Event{
 		Response: body,
 		Observable: &observable,
 	}
+}
 
-	t.eventChan <- e
+func (t *poller) poolData(observable Observable) {
+	data := t.fetchData(observable)
+	event := buildEvent(observable, data)
+	t.eventChan <- event
 }
 
 func (t *poller) HandleEvent(event Event) (response.ResponseAccessor, error) {
