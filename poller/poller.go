@@ -16,34 +16,35 @@ import (
 )
 
 type Event struct {
-	Response []byte
+	Response   []byte
 	Observable *Observable
 }
 
 type Observable struct {
-	Address		string
-	interval	*time.Duration	
+	Address  string
+	interval *time.Duration
 }
 
 type poller struct {
-	apiUrl   		string
-	interval 		time.Duration
-	observables		[]Observable
-	eventChan		chan Event
-	errorHandler	func(err error) 
-	jobsRunning 	sync.WaitGroup
-	responseType	response.Responser
+	apiUrl       string
+	interval     time.Duration
+	observables  []Observable
+	eventChan    chan Event
+	errorHandler func(err error)
+	jobsRunning  sync.WaitGroup
+	responseType response.Responser
+	jobs         []*scheduler.Job
 }
 
 func New(url string, responseObject response.Responser) *poller {
 	rate := config.GetConfig().FetchRate()
 
 	return &poller{
-		apiUrl:			url,
-		interval: 		time.Duration(rate) * time.Millisecond,
-		observables:	make([]Observable, 0),
-		eventChan: 		make(chan Event),
-		responseType: 	responseObject,	
+		apiUrl:       url,
+		interval:     time.Duration(rate) * time.Millisecond,
+		observables:  make([]Observable, 0),
+		eventChan:    make(chan Event),
+		responseType: responseObject,
 	}
 }
 
@@ -64,6 +65,7 @@ func (t *poller) executeJob(observable Observable) {
 
 	ticker := clockwork.NewRealClock().NewTicker(*observable.interval)
 	job := scheduler.Every(ticker).Repeat(3).Do(t.poolData, observable)
+	t.jobs = append(t.jobs, job)
 	job.Wait()
 }
 
@@ -86,7 +88,7 @@ func (t *poller) fetchData(observable Observable) []byte {
 
 func buildEvent(observable Observable, body []byte) Event {
 	return Event{
-		Response: body,
+		Response:   body,
 		Observable: &observable,
 	}
 }
@@ -100,7 +102,7 @@ func (t *poller) poolData(observable Observable) {
 func (t *poller) HandleEvent(event Event) (response.ResponseAccessor, error) {
 	typedResponse := t.responseType.Unmarshal(event.Response)
 
-	v, ok := typedResponse.(response.ResponseAccessor);
+	v, ok := typedResponse.(response.ResponseAccessor)
 	if !ok {
 		return nil, errors.New("Event response does not implement the Responser interface")
 	}
@@ -125,4 +127,11 @@ func (p *poller) AddObservable(obs ...Observable) {
 func (p *poller) waitForJobsToComplete() {
 	defer close(p.eventChan)
 	p.jobsRunning.Wait()
+}
+
+func (p *poller) stopAll() {
+	for _, j := range p.jobs {
+		j.Stop()
+	}
+
 }
