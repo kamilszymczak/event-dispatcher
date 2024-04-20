@@ -118,9 +118,9 @@ func TestSchedulerWithStringParameters(t *testing.T) {
 	}
 }
 
-func TestSchedulerStop(t *testing.T) {
+func TestSchedulerCancelJob(t *testing.T) {
 	const (
-		interval time.Duration = 500 * time.Millisecond
+		interval time.Duration = 200 * time.Millisecond
 		repeat int = 3
 		want string = "HelloHello"
 	)
@@ -133,20 +133,18 @@ func TestSchedulerStop(t *testing.T) {
 	fnParams := []string{"Hello"}
 	instanceVar := ""
 
-	fc := clock.NewMockClock()
-	ticker := fc.NewTicker(interval)
+	ticker := clock.C.NewTicker(interval)
 
 	arguments := []interface{}{&instanceVar}
 	for _, x := range fnParams {
 		arguments = append(arguments, x)
 	}
-	t1 := Every(ticker).Repeat(repeat).Do(fn, arguments...)
+	job := Every(ticker).Repeat(repeat).Do(fn, arguments...)
 
-	fc.AddTime(interval)
-	time.Sleep(30 * time.Millisecond)
-	t1.Stop()
-	fc.AddTime(interval)
-	t1.Wait()
+	// cancel job after task expected to have executed twice
+	time.Sleep(250 * time.Millisecond)
+	job.Stop()
+	job.Wait()
 
 	if instanceVar != want {
 		t.Errorf("Expected %s runs, got %s", want, instanceVar)

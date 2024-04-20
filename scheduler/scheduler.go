@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"reflect"
@@ -16,19 +17,23 @@ type Scheduler interface {
 }
 
 type Job struct {
+	Ctx context.Context
+	Cancel context.CancelFunc
 	interval clock.Ticker
 	jobFunc func()
 	repeats int
 	running bool
-	quit chan struct{}
+	// quit chan struct{}
 }
 
 func newJob(interval clock.Ticker) *Job {
+	context, cancel := context.WithCancel(context.Background())
 	j := &Job{
+		Ctx: context,
+		Cancel: cancel,
 		interval: interval,
 		jobFunc: nil,
 		repeats: -1,
-		quit: make(chan struct{}, 1),
 	}
 	return j
 }
@@ -106,7 +111,7 @@ func (j *Job) Do(fn any, args ...any) *Job {
 			f.Call(in)
 
 			if(i >= j.repeats){
-				close(j.quit)
+				j.Cancel()
 				return
 			}
 
@@ -114,7 +119,7 @@ func (j *Job) Do(fn any, args ...any) *Job {
 				case <- j.interval.Chan():
 					log.Print("received from ticker ch")
 					continue
-				case <- j.quit:
+				case <- j.Ctx.Done():
 					break L
 			}
 		}
@@ -123,12 +128,12 @@ func (j *Job) Do(fn any, args ...any) *Job {
 }
 
 func (j *Job) Stop() {
-	close(j.quit)
+	j.Cancel()
 }
 
 // Blocking until job finishes
 func (j *Job) Wait() {
-	<-j.quit
+	<-j.Ctx.Done()
 }
 
 // Checks if job running indefinitely 
