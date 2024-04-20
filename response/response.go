@@ -1,7 +1,16 @@
 package response
 
+import (
+	"encoding/json"
+	"log"
+)
+
 type Responser interface {
 	ResponseAccessor
+	Unmarshaler
+}
+
+type Unmarshaler interface {
 	Unmarshal(bytes []byte) any
 }
 
@@ -10,6 +19,17 @@ type ResponseAccessor interface {
 	GetTeam2Name() string
 	GetTeamHomeScore() int
 	GetTeamAwayScore() int
+}
+
+type DefaultResponse struct {
+}
+
+func (d DefaultResponse) Unmarshal(bytes []byte) any {
+	var output LivescoreData
+	if err := json.Unmarshal(bytes, &output); err != nil {
+		log.Fatal(err)
+	}
+	return output
 }
 
 // func Insert[T Payload](req request.Request, res T) (*Response[T], bool) {

@@ -2,11 +2,13 @@ package response
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 )
 
 type LivescoreData struct {
+	DefaultResponse
 	EventID       string   `json:"Eid"`
 	EventStatus   string   `json:"Eps"`
 	Team1Info     []TeamInfo `json:"T1"`
@@ -21,10 +23,16 @@ type TeamInfo struct {
 }
 
 func (p LivescoreData) GetTeam1Name() string {
+	if(len(p.Team1Info) <= 0) {
+		return ""
+	}
 	return p.Team1Info[0].TeamName
 }
 
 func (p LivescoreData) GetTeam2Name() string {
+	if(len(p.Team2Info) <= 0) {
+		return ""
+	}
 	return p.Team2Info[0].TeamName
 }
 
@@ -39,6 +47,7 @@ func (p LivescoreData) GetTeamAwayScore() int {
 }
 
 func (p LivescoreData) Unmarshal(bytes []byte) any {
+	fmt.Println("running livescore unmarhsall -> ")
 	var output LivescoreData
 	if err := json.Unmarshal(bytes, &output); err != nil {
 		log.Fatal(err)
