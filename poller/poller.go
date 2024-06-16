@@ -64,26 +64,30 @@ func (t *poller) executeJob(observable Observable) {
 	defer t.jobsRunning.Done()
 
 	ticker := clockwork.NewRealClock().NewTicker(*observable.interval)
-	job := scheduler.Every(ticker).Repeat(3).Do(t.poolData, observable)
+	job := scheduler.Every(ticker).Repeat(t.repeats).Do(t.poolData, observable)
 	t.jobs = append(t.jobs, job)
 	job.Wait()
 }
 
-func (t *poller) fetchData(observable Observable) []byte {
-	log.Print("pooling data for " + observable.Address)
+func (t *poller) fetchData(observable Observable) ([]byte, error) {
+	log.Printf("Pooling data for %s", observable.Address)
 
-	res, err := http.Get(fmt.Sprintf("%s%s", t.apiUrl, observable.Address))
+	resp, err := http.Get(fmt.Sprintf("%s%s", t.apiUrl, observable.Address))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer res.Body.Close()
+	defer resp.Body.Close()
 
-	body, err := io.ReadAll(res.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Fetching data unsuccessful, response status: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return body
+	return body, nil
 }
 
 func buildEvent(observable Observable, body []byte) Event {
@@ -94,17 +98,26 @@ func buildEvent(observable Observable, body []byte) Event {
 }
 
 func (t *poller) poolData(observable Observable) {
-	data := t.fetchData(observable)
+	data, err := t.fetchData(observable)
+	if err != nil {
+		log.Print(err.Error())
+		return
+	}
+
 	event := buildEvent(observable, data)
 	t.eventChan <- event
 }
 
 func (t *poller) HandleEvent(event Event) (response.ResponseAccessor, error) {
-	typedResponse := t.responseType.Unmarshal(event.Response)
+	typedResponse, err := t.responseType.Unmarshal(event.Response)
+
+	if err != nil {
+		return nil, err
+	}
 
 	v, ok := typedResponse.(response.ResponseAccessor)
 	if !ok {
-		return nil, errors.New("Event response does not implement the Responser interface")
+		return nil, errors.New("event response does not implement the Responser interface")
 	}
 
 	return v, nil

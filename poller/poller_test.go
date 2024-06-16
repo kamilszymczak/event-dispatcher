@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/kamilszymczak/event-dispatcher/response"
@@ -31,7 +33,8 @@ func TestPoolingDataFromLivescore(t *testing.T) {
 
 	obs := Observable{Address: ""}
 
-	event := buildEvent(obs, poller.fetchData(obs))
+	data, _ := poller.fetchData(obs)
+	event := buildEvent(obs, data)
 	got, err := poller.HandleEvent(event)
 
 	if err != nil {
@@ -67,7 +70,8 @@ func TestPoolingDataFromLivescoreIncorrectJSONFormat(t *testing.T) {
 
 	obs := Observable{Address: ""}
 
-	event := buildEvent(obs, poller.fetchData(obs))
+	data, _ := poller.fetchData(obs)
+	event := buildEvent(obs, data)
 	got, err := poller.HandleEvent(event)
 
 	if err != nil {
@@ -80,5 +84,17 @@ func TestPoolingDataFromLivescoreIncorrectJSONFormat(t *testing.T) {
 
 	if got.GetTeamHomeScore() != expected.GetTeamHomeScore() {
 		t.Errorf("Expected %v got %v", expected.GetTeamHomeScore(), got.GetTeamHomeScore())
+	}
+}
+
+func TestPoolingDataFromLivescoreInvalidAddress(t *testing.T) {
+	poller := &poller{apiUrl: "https://prod-public-api.livescore.com/v1/api/app/scoreboard/soccer/", responseType: response.LivescoreData{}}
+	obs := Observable{Address: "108583400"}
+	want := 410
+
+	_, err := poller.fetchData(obs)
+
+	if !strings.Contains(err.Error(), strconv.Itoa(want)) {
+		t.Errorf("Expected error to contain status code %v got %v", 410, err.Error())
 	}
 }

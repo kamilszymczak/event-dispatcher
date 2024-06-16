@@ -11,7 +11,7 @@ type Responser interface {
 }
 
 type Unmarshaler interface {
-	Unmarshal(bytes []byte) any
+	Unmarshal(bytes []byte) (any, error)
 }
 
 type ResponseAccessor interface {

@@ -3,7 +3,6 @@ package response
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 )
 
@@ -46,11 +45,11 @@ func (p LivescoreData) GetTeamAwayScore() int {
 	return n
 }
 
-func (p LivescoreData) Unmarshal(bytes []byte) any {
-	fmt.Println("running livescore unmarhsall -> ")
+func (p LivescoreData) Unmarshal(bytes []byte) (any, error) {
 	var output LivescoreData
 	if err := json.Unmarshal(bytes, &output); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return output
+	fmt.Println("Unmarshalling livescore data, received ", output)
+	return output, nil
 }
