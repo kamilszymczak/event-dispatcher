@@ -110,7 +110,7 @@ func (j *Job) Do(fn any, args ...any) *Job {
 			i++
 			f.Call(in)
 
-			if(i >= j.repeats){
+			if(!j.Indefinite() && i >= j.repeats){
 				j.Cancel()
 				return
 			}
