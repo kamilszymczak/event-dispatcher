@@ -25,6 +25,8 @@ type Observable struct {
 	interval *time.Duration
 }
 
+type dispatchFunc func(response.ResponseAccessor) bool
+
 type poller struct {
 	apiUrl       string
 	interval     time.Duration
@@ -34,6 +36,7 @@ type poller struct {
 	jobsRunning  sync.WaitGroup
 	responseType response.Responser
 	jobs         []*scheduler.Job
+	dispatchFunc dispatchFunc
 }
 
 func New(url string, responseObject response.Responser) *poller {
@@ -64,7 +67,7 @@ func (t *poller) executeJob(observable Observable) {
 	defer t.jobsRunning.Done()
 
 	ticker := clockwork.NewRealClock().NewTicker(*observable.interval)
-	job := scheduler.Every(ticker).Repeat(t.repeats).Do(t.poolData, observable)
+	job := scheduler.Every(ticker).Do(t.poolData, observable)
 	t.jobs = append(t.jobs, job)
 	job.Wait()
 }
@@ -79,7 +82,7 @@ func (t *poller) fetchData(observable Observable) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Fetching data unsuccessful, response status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("fetching data unsuccessful, response status: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -105,7 +108,16 @@ func (t *poller) poolData(observable Observable) {
 	}
 
 	event := buildEvent(observable, data)
-	t.eventChan <- event
+
+	if t.dispatchFunc == nil {
+		t.eventChan <- event
+		return
+	}
+
+	response, _ := t.HandleEvent(event)
+	if t.dispatchFunc(response) {
+		t.eventChan <- event
+	}
 }
 
 func (t *poller) HandleEvent(event Event) (response.ResponseAccessor, error) {
@@ -146,5 +158,8 @@ func (p *poller) stopAll() {
 	for _, j := range p.jobs {
 		j.Stop()
 	}
+}
 
+func (p *poller) SetDispatchFunc(fn dispatchFunc) {
+	p.dispatchFunc = fn
 }

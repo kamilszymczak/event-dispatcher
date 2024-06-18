@@ -45,6 +45,10 @@ func (p LivescoreData) GetTeamAwayScore() int {
 	return n
 }
 
+func (p LivescoreData) GetGameStatus() int {
+	return p.EventFinished
+}
+
 func (p LivescoreData) Unmarshal(bytes []byte) (any, error) {
 	var output LivescoreData
 	if err := json.Unmarshal(bytes, &output); err != nil {

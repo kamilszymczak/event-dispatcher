@@ -19,6 +19,7 @@ type ResponseAccessor interface {
 	GetTeam2Name() string
 	GetTeamHomeScore() int
 	GetTeamAwayScore() int
+	GetGameStatus() int
 }
 
 type DefaultResponse struct {

@@ -98,3 +98,39 @@ func TestPoolingDataFromLivescoreInvalidAddress(t *testing.T) {
 		t.Errorf("Expected error to contain status code %v got %v", 410, err.Error())
 	}
 }
+
+func TestDispatchFunc(t *testing.T) {
+	dispatchFunc := func(resp response.ResponseAccessor) bool {
+		return resp.GetGameStatus() == 2
+	}
+
+	rawJson, _ := os.ReadFile("./poller_livescoreOutputValid_test.json")
+	poller := &poller{apiUrl: "", responseType: response.LivescoreData{}}
+	poller.SetDispatchFunc(dispatchFunc)
+
+	event := buildEvent(Observable{}, rawJson)
+	response, _ := poller.HandleEvent(event)
+	isMatchOver := poller.dispatchFunc(response)
+
+	if isMatchOver != true {
+		t.Errorf("Expected %v got %v", true, isMatchOver)
+	}
+}
+
+func TestDontDispatch(t *testing.T) {
+	dispatchFunc := func(resp response.ResponseAccessor) bool {
+		return resp.GetGameStatus() == 1
+	}
+
+	rawJson, _ := os.ReadFile("./poller_livescoreOutputValid_test.json")
+	poller := &poller{apiUrl: "", responseType: response.LivescoreData{}}
+	poller.SetDispatchFunc(dispatchFunc)
+
+	event := buildEvent(Observable{}, rawJson)
+	response, _ := poller.HandleEvent(event)
+	matchOngoing := poller.dispatchFunc(response)
+
+	if matchOngoing != false {
+		t.Errorf("Expected %v got %v", false, matchOngoing)
+	}
+}
