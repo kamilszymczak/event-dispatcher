@@ -16,7 +16,7 @@ import (
 )
 
 type Event struct {
-	Response   []byte
+	Response   response.ResponseAccessor
 	Observable *Observable
 }
 
@@ -95,35 +95,8 @@ func (t *poller) fetchData(observable Observable) ([]byte, error) {
 	return body, nil
 }
 
-func buildEvent(observable Observable, body []byte) Event {
-	return Event{
-		Response:   body,
-		Observable: &observable,
-	}
-}
-
-func (t *poller) poolData(observable Observable) {
-	data, err := t.fetchData(observable)
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
-
-	event := buildEvent(observable, data)
-
-	if t.dispatchFunc == nil {
-		t.eventChan <- event
-		return
-	}
-
-	response, _ := t.HandleEvent(event)
-	if t.dispatchFunc(response) {
-		t.eventChan <- event
-	}
-}
-
-func (t *poller) HandleEvent(event Event) (response.ResponseAccessor, error) {
-	typedResponse, err := t.responseType.Unmarshal(event.Response)
+func parseData(p *poller, body []byte) (response.ResponseAccessor, error) {
+	typedResponse, err := p.responseType.Unmarshal(body)
 
 	if err != nil {
 		return nil, err
@@ -135,6 +108,33 @@ func (t *poller) HandleEvent(event Event) (response.ResponseAccessor, error) {
 	}
 
 	return v, nil
+}
+
+func buildEvent(observable Observable, response response.ResponseAccessor) Event {
+	return Event{
+		Response:   response,
+		Observable: &observable,
+	}
+}
+
+func (t *poller) poolData(observable Observable) {
+	data, err := t.fetchData(observable)
+	if err != nil {
+		log.Print(err.Error())
+		return
+	}
+
+	parsedResponse, _ := parseData(t, data)
+	event := buildEvent(observable, parsedResponse)
+
+	if t.dispatchFunc == nil {
+		t.eventChan <- event
+		return
+	}
+
+	if t.dispatchFunc(event.Response) {
+		t.eventChan <- event
+	}
 }
 
 func (p *poller) GetEventChannel() <-chan Event {

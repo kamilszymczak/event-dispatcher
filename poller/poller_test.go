@@ -34,8 +34,7 @@ func TestPoolingDataFromLivescore(t *testing.T) {
 	obs := Observable{Address: ""}
 
 	data, _ := poller.fetchData(obs)
-	event := buildEvent(obs, data)
-	got, err := poller.HandleEvent(event)
+	got, err := parseData(poller, data)
 
 	if err != nil {
 		t.Errorf("event handled with error: %t", err)
@@ -71,8 +70,7 @@ func TestPoolingDataFromLivescoreIncorrectJSONFormat(t *testing.T) {
 	obs := Observable{Address: ""}
 
 	data, _ := poller.fetchData(obs)
-	event := buildEvent(obs, data)
-	got, err := poller.HandleEvent(event)
+	got, err := parseData(poller, data)
 
 	if err != nil {
 		t.Errorf("event handled with error: %t", err)
@@ -108,9 +106,9 @@ func TestDispatchFunc(t *testing.T) {
 	poller := &poller{apiUrl: "", responseType: response.LivescoreData{}}
 	poller.SetDispatchFunc(dispatchFunc)
 
-	event := buildEvent(Observable{}, rawJson)
-	response, _ := poller.HandleEvent(event)
-	isMatchOver := poller.dispatchFunc(response)
+	parsed, _ := parseData(poller, rawJson)
+	event := buildEvent(Observable{}, parsed)
+	isMatchOver := poller.dispatchFunc(event.Response)
 
 	if isMatchOver != true {
 		t.Errorf("Expected %v got %v", true, isMatchOver)
@@ -126,9 +124,9 @@ func TestDontDispatch(t *testing.T) {
 	poller := &poller{apiUrl: "", responseType: response.LivescoreData{}}
 	poller.SetDispatchFunc(dispatchFunc)
 
-	event := buildEvent(Observable{}, rawJson)
-	response, _ := poller.HandleEvent(event)
-	matchOngoing := poller.dispatchFunc(response)
+	parsed, _ := parseData(poller, rawJson)
+	event := buildEvent(Observable{}, parsed)
+	matchOngoing := poller.dispatchFunc(event.Response)
 
 	if matchOngoing != false {
 		t.Errorf("Expected %v got %v", false, matchOngoing)
