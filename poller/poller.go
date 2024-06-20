@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -35,9 +36,10 @@ type poller struct {
 	errorHandler func(err error)
 	jobsRunning  sync.WaitGroup
 	responseType response.Responser
-	jobs         []*scheduler.Job
+	jobs         map[string]*scheduler.Job
 	dispatchFunc dispatchFunc
 	shuffle 	 *delay
+	stopObservableAfterDispatch	bool
 }
 
 func New(url string, responseObject response.Responser) *poller {
@@ -49,15 +51,17 @@ func New(url string, responseObject response.Responser) *poller {
 		observables:  make([]Observable, 0),
 		eventChan:    make(chan Event),
 		responseType: responseObject,
+		jobs:		  make(map[string]*scheduler.Job),
 		shuffle:	  newDelay(),
 	}
 }
 
 func (p *poller) Listen() <-chan Event {
-	log.Print("Poller listener started")
+	slog.Info("Poller listener started", "poller endpoint", p.apiUrl)
 	p.jobsRunning.Add(len(p.observables))
 
 	for _, obs := range p.observables {
+		slog.Info("Scheduling job.", "observable", obs)
 		scheduleJob(p, obs)
 	}
 
@@ -70,12 +74,12 @@ func (t *poller) executeJob(observable Observable) {
 
 	ticker := clockwork.NewRealClock().NewTicker(*observable.interval)
 	job := scheduler.Every(ticker).Do(t.poolData, observable)
-	t.jobs = append(t.jobs, job)
+	t.jobs[observable.Address] = job
 	job.Wait()
 }
 
 func (t *poller) fetchData(observable Observable) ([]byte, error) {
-	log.Printf("Pooling data for %s", observable.Address)
+	slog.Info("Pooling data started.", "observable", observable.Address)
 
 	resp, err := http.Get(fmt.Sprintf("%s%s", t.apiUrl, observable.Address))
 	if err != nil {
@@ -84,6 +88,8 @@ func (t *poller) fetchData(observable Observable) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		slog.Warn("Fetching data unsuccessful.", "observable address", observable.Address, "response status", resp.StatusCode)
+		t.jobs[observable.Address].Cancel()
 		return nil, fmt.Errorf("fetching data unsuccessful, response status: %d", resp.StatusCode)
 	}
 
@@ -126,6 +132,7 @@ func (t *poller) poolData(observable Observable) {
 
 	parsedResponse, _ := parseData(t, data)
 	event := buildEvent(observable, parsedResponse)
+	slog.Info("Response parsed and event built.", "observable address", event.Observable.Address,"event response", event.Response)
 
 	if t.dispatchFunc == nil {
 		t.eventChan <- event
@@ -134,6 +141,11 @@ func (t *poller) poolData(observable Observable) {
 
 	if t.dispatchFunc(event.Response) {
 		t.eventChan <- event
+	}
+
+	if t.stopObservableAfterDispatch {
+		slog.Info("Observable's response has been dispatched, cancelling it's job.", "observable", observable.Address)
+		t.jobs[observable.Address].Cancel()
 	}
 }
 
@@ -154,6 +166,7 @@ func (p *poller) AddObservable(obs ...Observable) {
 func (p *poller) waitForJobsToComplete() {
 	defer close(p.eventChan)
 	p.jobsRunning.Wait()
+	slog.Info("All jobs finished running, closing listener channel.")
 }
 
 func (p *poller) stopAll() {
@@ -164,6 +177,10 @@ func (p *poller) stopAll() {
 
 func (p *poller) SetDispatchFunc(fn dispatchFunc) {
 	p.dispatchFunc = fn
+}
+
+func (p *poller) StopObservableAfterDispatched(toggle bool) {
+	p.stopObservableAfterDispatch = toggle
 }
 
 type delay struct {

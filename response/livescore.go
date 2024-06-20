@@ -2,7 +2,6 @@ package response
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 )
 
@@ -54,6 +53,5 @@ func (p LivescoreData) Unmarshal(bytes []byte) (any, error) {
 	if err := json.Unmarshal(bytes, &output); err != nil {
 		return nil, err
 	}
-	fmt.Println("Unmarshalling livescore data, received ", output)
 	return output, nil
 }

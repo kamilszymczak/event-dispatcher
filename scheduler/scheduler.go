@@ -3,7 +3,6 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/mixer/clock"
@@ -117,7 +116,6 @@ func (j *Job) Do(fn any, args ...any) *Job {
 
 			select {
 				case <- j.interval.Chan():
-					log.Print("received from ticker ch")
 					continue
 				case <- j.Ctx.Done():
 					break L
