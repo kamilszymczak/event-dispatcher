@@ -1,2 +1,3 @@
 request:
   fetchRate: 2000
+  delayGap: 5000

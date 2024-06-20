@@ -10,7 +10,8 @@ import (
 
 type config struct {
 	Request struct {
-		FetchRate int `yaml:"fetchRate"`
+		FetchRate	int `yaml:"fetchRate"`
+		DelayGap	int `yaml:"delayGap"`	
 	} `yaml:"request"`
 }
 
@@ -43,4 +44,8 @@ func readFile(cfg *config) {
 
 func (c config) FetchRate() int {
     return c.Request.FetchRate
+}
+
+func (c config) GetDatabase() Database {
+	return c.Database
 }

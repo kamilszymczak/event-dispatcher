@@ -37,6 +37,7 @@ type poller struct {
 	responseType response.Responser
 	jobs         []*scheduler.Job
 	dispatchFunc dispatchFunc
+	shuffle 	 *delay
 }
 
 func New(url string, responseObject response.Responser) *poller {
@@ -48,6 +49,7 @@ func New(url string, responseObject response.Responser) *poller {
 		observables:  make([]Observable, 0),
 		eventChan:    make(chan Event),
 		responseType: responseObject,
+		shuffle:	  newDelay(),
 	}
 }
 
@@ -56,7 +58,7 @@ func (p *poller) Listen() <-chan Event {
 	p.jobsRunning.Add(len(p.observables))
 
 	for _, obs := range p.observables {
-		go p.executeJob(obs)
+		scheduleJob(p, obs)
 	}
 
 	go p.waitForJobsToComplete()
@@ -162,4 +164,47 @@ func (p *poller) stopAll() {
 
 func (p *poller) SetDispatchFunc(fn dispatchFunc) {
 	p.dispatchFunc = fn
+}
+
+type delay struct {
+	current	time.Duration
+	toggle	bool
+	gap		time.Duration
+}
+
+// Shuffle is used to specify if Observables should have different start times
+// instead of all starting at the same time, therefore if same interval will hit
+// endpoint at the same time
+func (p *poller) Shuffle(toggle bool) {
+	p.shuffle.toggle = toggle
+}
+
+func newDelay() *delay {
+	return &delay{
+		current: 0,
+		toggle: false,
+		gap: time.Duration(config.GetConfig().Request.DelayGap) * time.Millisecond,
+	}
+}
+
+func scheduleJob(p *poller, observable Observable) {
+	if !p.shuffle.toggle {
+		go p.executeJob(observable)
+		return
+	}
+
+	delayJob(p, observable)
+}
+
+func delayJob(p *poller, observable Observable) {
+	job := func() {
+		p.executeJob(observable)
+	}
+
+	p.shuffle.delayFunction(job)	
+}
+
+func (d *delay) delayFunction(fn func()) {
+	time.AfterFunc(d.current, fn)
+	d.current += d.gap
 }
