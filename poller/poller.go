@@ -141,11 +141,11 @@ func (t *poller) poolData(observable Observable) {
 
 	if t.dispatchFunc(event.Response) {
 		t.eventChan <- event
-	}
 
-	if t.stopObservableAfterDispatch {
-		slog.Info("Observable's response has been dispatched, cancelling it's job.", "observable", observable.Address)
-		t.jobs[observable.Address].Cancel()
+		if t.stopObservableAfterDispatch {
+			slog.Info("Observable's response has been dispatched, cancelling it's job.", "observable", observable.Address)
+			t.jobs[observable.Address].Cancel()
+		}
 	}
 }
 
